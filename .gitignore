@@ -1,0 +1,7 @@
+client_secret.json
+token.json
+output/
+__pycache__/
+*.pyc
+.DS_Store
+pipeline_output.txt
