@@ -3,7 +3,19 @@ name: Auto generate and upload focus music
 on:
   schedule:
     - cron: "13 */6 * * *"
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      privacy:
+        description: "YouTube privacy status"
+        type: choice
+        default: public
+        options: [public, unlisted, private]
+      theme:
+        description: "Theme (or 'random')"
+        default: random
+      minutes:
+        description: "Video length in minutes"
+        default: "45"
 
 jobs:
   generate-and-upload:
@@ -27,8 +39,12 @@ jobs:
 
       - name: Generate music + video + thumbnail + metadata
         id: gen
+        env:
+          PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
         run: |
-          python3 pipeline.py --minutes 30 --mood random > pipeline_output.txt
+          python3 pipeline.py \
+            --minutes "${{ github.event.inputs.minutes || '45' }}" \
+            --theme "${{ github.event.inputs.theme || 'random' }}" > pipeline_output.txt
           cat pipeline_output.txt
           OUTDIR=$(grep "Tayyor! Hammasi shu papkada:" pipeline_output.txt | sed 's/.*papkada: //')
           echo "outdir=$OUTDIR" >> "$GITHUB_OUTPUT"
@@ -39,4 +55,5 @@ jobs:
           YT_CLIENT_SECRET: ${{ secrets.YT_CLIENT_SECRET }}
           YT_REFRESH_TOKEN: ${{ secrets.YT_REFRESH_TOKEN }}
         run: |
-          python3 youtube_upload.py "${{ steps.gen.outputs.outdir }}" --privacy public
+          python3 youtube_upload.py "${{ steps.gen.outputs.outdir }}" \
+            --privacy "${{ github.event.inputs.privacy || 'public' }}"

@@ -64,7 +64,7 @@ def get_authenticated_service():
 
 def upload_video(outdir, privacy="unlisted"):
     meta_path = os.path.join(outdir, "youtube_metadata.json")
-    video_path = os.path.join(outdir, "piano_video.mp4")
+    video_path = os.path.join(outdir, "focus_video.mp4")
     thumb_path = os.path.join(outdir, "thumbnail.png")
 
     with open(meta_path) as f:

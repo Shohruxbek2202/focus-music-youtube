@@ -1,6 +1,8 @@
 client_secret.json
 token.json
 output/
+_bg_raw
+background_info.json
 __pycache__/
 *.pyc
 .DS_Store
