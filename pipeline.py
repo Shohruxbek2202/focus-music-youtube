@@ -36,30 +36,30 @@ def run(minutes, theme, seed=None, preview=None):
     outdir = os.path.join(OUTPUT_ROOT, slug)
     os.makedirs(outdir, exist_ok=True)
 
-    print(f"\n=== [1/5] Fon rasmi olinmoqda (theme={theme}) ===")
+    print(f"\n=== [1/5] Fetching background image (theme={theme}) ===")
     bg_info = assets.fetch_background(THEMES[theme]["queries"], outdir, seed=seed)
     with open(os.path.join(outdir, "background_info.json"), "w") as f:
         json.dump(bg_info, f, indent=2, ensure_ascii=False)
     print(f"    -> {bg_info['source']}: {bg_info['path']}")
 
-    print(f"=== [2/5] Ambient musiqa (loop) generatsiya qilinmoqda (seed={seed}) ===")
+    print(f"=== [2/5] Generating ambient music (loop) (seed={seed}) ===")
     gen = music_gen.generate(theme=theme, seed=seed, outdir=outdir, target_minutes=minutes)
     print(f"    -> {gen['loop_seconds']:.0f}s loop · base {gen['base_freq']:.0f}Hz")
 
-    print("=== [3/5] Metadata (o'zbekcha sarlavha/tavsif/teglar) ===")
+    print("=== [3/5] Metadata (English title/description/tags) ===")
     meta = metadata_gen.generate(outdir, minutes, seed=seed, bg_info=bg_info)
     print(f"    -> {meta['title']}")
 
-    print("=== [4/5] Kinematik video render qilinmoqda (eng uzun bosqich) ===")
+    print("=== [4/5] Rendering cinematic video (longest stage) ===")
     video_path = video_gen.render(outdir, target_minutes=minutes, preview_seconds=preview)
     print(f"    -> {video_path}")
 
-    print("=== [5/5] Thumbnail yasalmoqda ===")
+    print("=== [5/5] Building thumbnail ===")
     thumb = thumbnail_gen.generate(outdir, word=meta["thumb_word"],
                                    duration_min=minutes, hz=meta["hz"])
     print(f"    -> {thumb}")
 
-    print(f"\nTayyor! Hammasi shu papkada: {os.path.abspath(outdir)}")
+    print(f"\nDone! Everything is in this folder: {os.path.abspath(outdir)}")
     return outdir
 
 
@@ -68,6 +68,6 @@ if __name__ == "__main__":
     p.add_argument("--minutes", type=float, default=45.0)
     p.add_argument("--theme", type=str, default="random", choices=THEME_NAMES + ["random"])
     p.add_argument("--seed", type=int, default=None)
-    p.add_argument("--preview", type=float, default=None, help="faqat shuncha soniya render qilish (sinov)")
+    p.add_argument("--preview", type=float, default=None, help="render only this many seconds (test)")
     args = p.parse_args()
     run(args.minutes, args.theme, args.seed, args.preview)

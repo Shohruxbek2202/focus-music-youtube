@@ -46,7 +46,7 @@ jobs:
             --minutes "${{ github.event.inputs.minutes || '45' }}" \
             --theme "${{ github.event.inputs.theme || 'random' }}" > pipeline_output.txt
           cat pipeline_output.txt
-          OUTDIR=$(grep "Tayyor! Hammasi shu papkada:" pipeline_output.txt | sed 's/.*papkada: //')
+          OUTDIR=$(grep "Done! Everything is in this folder:" pipeline_output.txt | sed 's/.*this folder: //')
           echo "outdir=$OUTDIR" >> "$GITHUB_OUTPUT"
 
       - name: Upload to YouTube

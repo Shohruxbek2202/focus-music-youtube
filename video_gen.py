@@ -323,7 +323,7 @@ def render(outdir, target_minutes=None, preview_seconds=None):
         proc.stdin.write(frame.astype(np.uint8).tobytes())
 
         if fi % (FPS * 120) == 0:
-            print(f"  kadr {fi}/{n_frames}  (t={t/60:.1f} daq)")
+            print(f"  frame {fi}/{n_frames}  (t={t/60:.1f} min)")
 
     proc.stdin.close()
     proc.wait()
@@ -337,4 +337,4 @@ if __name__ == "__main__":
     p.add_argument("--preview", type=float, default=None)
     args = p.parse_args()
     out = render(args.outdir, target_minutes=args.minutes, preview_seconds=args.preview)
-    print(f"Tayyor: {out}")
+    print(f"Done: {out}")

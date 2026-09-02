@@ -1,29 +1,29 @@
 """
-Umumiy mavzular (themes) — musiqa, video, thumbnail va metadata shu yerdan oziqlanadi.
+Shared themes — music, video, thumbnail and metadata all feed from here.
 
-Har bir mavzu "Lock in Focus" uslubidagi bitta kayfiyat: kinematik B&W rasm,
-sekin ambient musiqa va solfeggio/binaural chastota.
+Each theme is a single "Lock in Focus"-style mood: a cinematic B&W image,
+slow ambient music and a solfeggio/binaural frequency.
 
-Har render'da mavzu tasodifiy tanlanadi (yoki --theme bilan majburlanadi), so'ng
-mavzu ichidagi konsept so'z, kontekst, rasm so'rovi, chastota va tonalik
-seed asosida tasodifiy tanlanadi — shu bilan "har video original kontent" bo'ladi.
+On every render a theme is picked at random (or forced with --theme); then the
+concept word, context, image query, frequency and key inside that theme are
+chosen from a seed — so "every video is original content".
 """
 
-# Akkordlar C asosida (root-position) yozilgan; music_gen tasodifiy transpoze qiladi.
+# Chords are written in C (root position); music_gen transposes at random.
 THEMES = {
     "warrior": {
         "display": "WARRIOR",
-        "concepts": ["Qarshilik", "Temir Iroda", "Jangchi Ruhi", "Sindirilmas", "Ichki Olov"],
+        "concepts": ["Resistance", "Iron Will", "Warrior Mind", "Unbreakable", "Inner Fire"],
         "contexts": [
-            "Bosim ostida ishlash uchun fokus musiqasi",
-            "Mashaqqatli mehnat uchun diqqat qulfi",
-            "Charchoqni yengish uchun 40Hz sinf",
+            "Focus music for working under pressure",
+            "Deep concentration for hard work",
+            "40Hz gamma for beating fatigue",
         ],
         "queries": [
             "boxing gym", "boxer training", "boxing ring", "weightlifting", "gym workout dark", "stadium empty",
         ],
         "freqs": [40, 174, 285],
-        "beat_hz": 40.0,          # gamma — o'tkir diqqat
+        "beat_hz": 40.0,          # gamma — sharp focus
         "texture": "wind",
         "progression": [
             ["A2", "C3", "E3", "G3"],   # i7
@@ -35,24 +35,24 @@ THEMES = {
         "voices": 4,
         "harmonic_amps": (1.0, 0.42, 0.16, 0.06),
         "intro": (
-            "Yakuniy maydonga xush kelibsiz. Eng kuchli raqibingiz tashqarida emas — "
-            "u oynada senga qarab turibdi. Ushbu {hz}Hz synth pad'lar ikkilanishni "
-            "muzlatib, zehningni to'liq ijroga qulflasin."
+            "Welcome to the final arena. Your toughest opponent isn't out there — "
+            "it's staring back at you in the mirror. Let these {hz}Hz synth pads "
+            "freeze the hesitation and lock your mind into full execution."
         ),
     },
     "stoic": {
         "display": "STOIC",
-        "concepts": ["Sabr", "Toqat", "Metin", "Ataraksiya", "Sokin Kuch"],
+        "concepts": ["Patience", "Endurance", "Steadfast", "Ataraxia", "Quiet Strength"],
         "contexts": [
-            "Antik donolik bilan chuqur ish",
-            "Xotirjam diqqat uchun 432Hz musiqa",
-            "Uzoq mashg'ulot uchun barqaror ohang",
+            "Deep work with ancient wisdom",
+            "432Hz music for calm focus",
+            "A steady tone for long sessions",
         ],
         "queries": [
             "greek marble statue", "roman sculpture", "classical statue", "ancient sculpture", "marble bust",
         ],
         "freqs": [432, 528],
-        "beat_hz": 10.0,          # alpha — tinch, ammo hushyor
+        "beat_hz": 10.0,          # alpha — calm but alert
         "texture": "air",
         "progression": [
             ["C3", "E3", "G3", "B3"],   # Imaj7
@@ -64,24 +64,24 @@ THEMES = {
         "voices": 4,
         "harmonic_amps": (1.0, 0.45, 0.2, 0.08),
         "intro": (
-            "Sen boshqara olmaydigan narsalar bor. Ular shu yerda qolsin. "
-            "Bu {hz}Hz ohang ortiqcha shovqinni kesib, faqat muhim ishga joy qoldiradi."
+            "Some things are not in your control. Leave them at the door. "
+            "This {hz}Hz tone cuts the extra noise and leaves room only for the work that matters."
         ),
     },
     "monk": {
         "display": "MONK",
-        "concepts": ["Rohib Rejimi", "Sukunat", "Tazkiya", "Yolg'iz Zehn", "Ichki Bo'shliq"],
+        "concepts": ["Monk Mode", "Silence", "Clarity", "Solitary Mind", "Inner Void"],
         "contexts": [
-            "Chuqur diqqat uchun 963Hz musiqa",
-            "Sukunatda ishlash rejimi",
-            "Zehnni tozalash uchun ambient",
+            "963Hz music for deep focus",
+            "Work-in-silence mode",
+            "Ambient to clear the mind",
         ],
         "queries": [
             "buddhist monastery", "zen garden", "monk meditation", "temple fog",
             "pagoda mist", "old monastery interior",
         ],
         "freqs": [963, 852],
-        "beat_hz": 6.0,           # theta — meditativ
+        "beat_hz": 6.0,           # theta — meditative
         "texture": "air",
         "progression": [
             ["E2", "G#2", "B2", "D#3"],  # Imaj7
@@ -93,17 +93,17 @@ THEMES = {
         "voices": 3,
         "harmonic_amps": (1.0, 0.3, 0.12, 0.04),
         "intro": (
-            "Bu yer sokin. Telefon yo'q, ovoz yo'q, bahona yo'q. "
-            "{hz}Hz to'lqinlar zehningni bir nuqtaga to'plasin va ushlab tursin."
+            "This place is quiet. No phone, no voices, no excuses. "
+            "Let these {hz}Hz waves gather your mind to a single point and hold it there."
         ),
     },
     "midnight": {
         "display": "MIDNIGHT",
-        "concepts": ["Yarim Tun", "Tungi Smena", "Uyqusiz Zehn", "Sokin Soatlar", "Qorong'ida Yorug'"],
+        "concepts": ["Midnight", "Night Shift", "Sleepless Mind", "Quiet Hours", "Light in the Dark"],
         "contexts": [
-            "Tunda kodlash uchun fokus musiqasi",
-            "Kechqurun deep work uchun 396Hz",
-            "Tungi mashg'ulot uchun ambient",
+            "Focus music for coding at night",
+            "396Hz for late-night deep work",
+            "Ambient for the night shift",
         ],
         "queries": [
             "city skyline night", "rainy street night", "neon city street", "night city lights", "dark alley night",
@@ -121,17 +121,17 @@ THEMES = {
         "voices": 4,
         "harmonic_amps": (1.0, 0.4, 0.18, 0.07),
         "intro": (
-            "Hamma uxlab yotibdi. Bu soatlar faqat seniki. "
-            "Yomg'ir va {hz}Hz pad'lar ostida ishni oxiriga yetkaz."
+            "Everyone is asleep. These hours belong to you alone. "
+            "Under the rain and the {hz}Hz pads, take the work to the finish."
         ),
     },
     "storm": {
         "display": "STORM",
-        "concepts": ["Bo'ron", "Ichki Kuch", "Toshqin", "Momaqaldiroq", "Tinch Markaz"],
+        "concepts": ["The Storm", "Inner Force", "The Surge", "Thunder", "Calm Center"],
         "contexts": [
-            "Tartibsizlikni yengish uchun fokus musiqasi",
-            "Kuchli bosim ostida 285Hz",
-            "Diqqatni qayta qo'lga olish uchun ambient",
+            "Focus music for taming chaos",
+            "285Hz under heavy pressure",
+            "Ambient to reclaim your focus",
         ],
         "queries": [
             "storm clouds", "ocean waves storm", "lightning sky", "rough sea", "dramatic clouds", "dark sea horizon",
@@ -149,17 +149,17 @@ THEMES = {
         "voices": 4,
         "harmonic_amps": (1.0, 0.5, 0.22, 0.1),
         "intro": (
-            "Bo'ron tashqarida guvillaydi, sen esa markazda tinchsan. "
-            "{hz}Hz ohang bilan tartibsizlikni ish quvvatiga aylantir."
+            "The storm roars outside while you stay calm at the center. "
+            "Turn the chaos into working energy with this {hz}Hz tone."
         ),
     },
     "summit": {
         "display": "SUMMIT",
-        "concepts": ["Cho'qqi", "Yolg'iz Yo'l", "Balandlik", "Sovuq Havo", "Uzoq Maqsad"],
+        "concepts": ["The Summit", "Lonely Road", "Altitude", "Cold Air", "Distant Goal"],
         "contexts": [
-            "Uzoq maqsad uchun fokus musiqasi",
-            "Sekin, barqaror mehnat uchun 528Hz",
-            "Kun bo'yi diqqat uchun ambient",
+            "Focus music for the long goal",
+            "528Hz for slow, steady work",
+            "Ambient for all-day focus",
         ],
         "queries": [
             "mountain fog", "mountain summit clouds", "snowy mountain peak", "alpine landscape", "mountain ridge mist",
@@ -177,8 +177,8 @@ THEMES = {
         "voices": 3,
         "harmonic_amps": (1.0, 0.38, 0.16, 0.05),
         "intro": (
-            "Cho'qqi bir kunda zabt etilmaydi. Bir qadam, keyin yana biri. "
-            "{hz}Hz pad'lar qadamingni bir maromda ushlab tursin."
+            "The summit isn't taken in a day. One step, then another. "
+            "Let the {hz}Hz pads keep your pace steady."
         ),
     },
 }

@@ -9,7 +9,7 @@ Har render:
 - **fon rasmi** — Openverse (CC-litsenziyali, **kalit kerak emas**) yoki Pexels (`PEXELS_API_KEY` bo'lsa); ikkalasi ham ishlamasa protsedural fon
 - **musiqa** — sekin ambient synth pad + past drone + solfeggio ohang + binaural beat + shovqin qatlami; qisqa seamless loop
 - **video** — B&W kino-grade + sekin Ken Burns zoom + grain + vignette + pastda oltin audio-to'lqin vizualizatori + ~6s intro motivatsion matn
-- **metadata** — o'zbekcha konsept-sarlavha, motivatsion tavsif, teglar
+- **metadata** — English concept title, motivational description, tags
 - **thumbnail** — B&W kadr + bitta katta so'z (Anton shrift)
 
 ## Ishlatish

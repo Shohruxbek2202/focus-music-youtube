@@ -115,4 +115,4 @@ if __name__ == "__main__":
     p.add_argument("--duration-min", type=float, default=30.0)
     p.add_argument("--hz", type=int, default=None)
     args = p.parse_args()
-    print("Tayyor:", generate(args.outdir, args.word, args.duration_min, args.hz))
+    print("Done:", generate(args.outdir, args.word, args.duration_min, args.hz))

@@ -113,7 +113,7 @@ def _try_openverse(queries, outdir, dest, rng):
             try:
                 results = _openverse_query(query, rng, loose)
             except Exception as e:  # noqa: BLE001
-                print(f"  [assets] Openverse '{query}' xato: {e}")
+                print(f"  [assets] Openverse '{query}' error: {e}")
                 continue
             for r in results[:6]:
                 try:
@@ -131,7 +131,7 @@ def _try_openverse(queries, outdir, dest, rng):
                         "query": query,
                     }
                 except Exception as e:  # noqa: BLE001
-                    print(f"  [assets] Openverse rasm o'tkazib yuborildi: {e}")
+                    print(f"  [assets] Openverse image skipped: {e}")
                     continue
     return None
 
@@ -168,7 +168,7 @@ def _try_pexels(queries, outdir, dest, rng, api_key):
                 "query": query,
             }
         except Exception as e:  # noqa: BLE001
-            print(f"  [assets] Pexels '{query}' xato: {e}")
+            print(f"  [assets] Pexels '{query}' error: {e}")
             continue
     return None
 
@@ -221,7 +221,7 @@ def fetch_background(queries, outdir, seed=None, api_key=None):
     if info:
         return info
 
-    print("  [assets] Onlayn manba natija bermadi — protsedural fon")
+    print("  [assets] No online source returned a result — procedural background")
     return _procedural_background(dest, seed or 0, queries)
 
 

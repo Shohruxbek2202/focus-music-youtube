@@ -1,11 +1,11 @@
 """
-3-QISM: Metadata generatori (o'zbekcha, "Lock in Focus" uslubi).
+PART 3: Metadata generator (English, "Lock in Focus" style).
 
-gen_meta.json (mavzu, chastota, tonalik) + fon rasmi atributsiyasi asosida
-YouTube sarlavha / tavsif / teglar, shuningdek video uchun intro matni va
-thumbnail so'zini generatsiya qiladi. Har safar seed bo'yicha biroz boshqacha.
+From gen_meta.json (theme, frequency, key) plus the background image attribution
+it generates the YouTube title / description / tags, and also the intro text for
+the video and the thumbnail word. Slightly different every time, driven by seed.
 
-Ishlatish:
+Usage:
     python3 metadata_gen.py output/monk_7 --duration-min 30
 """
 
@@ -18,39 +18,39 @@ from themes import THEMES
 
 TITLE_TEMPLATES = [
     "{concept} | {context}",
-    "{concept} — {hz}Hz Focus Music | {dur} daqiqa",
-    "{concept} | Fokusni qulflash ({hz}Hz)",
-    "{concept} | {dur} daqiqa chuqur diqqat · {hz}Hz",
+    "{concept} — {hz}Hz Focus Music | {dur} min",
+    "{concept} | Lock In Focus ({hz}Hz)",
+    "{concept} | {dur} min Deep Focus · {hz}Hz",
 ]
 
 INTRO_LINES = [
-    "Telefonni ol, boshqa xonaga qo'y. Keyingi {dur} daqiqa faqat bitta ish uchun.",
-    "Diqqat — bu mushak. Bugun uni {dur} daqiqa mashq qildiramiz.",
-    "Kichik qadamlar bilan katta ishlar bitadi. Boshladik.",
-    "Hech kim kelib seni qutqarmaydi. O'zing boshlaysan — hozir.",
-    "Mukammal payt yo'q. Faqat shu payt bor.",
+    "Take your phone, put it in another room. The next {dur} minutes are for one thing only.",
+    "Focus is a muscle. Today we train it for {dur} minutes.",
+    "Big things get done in small steps. Let's begin.",
+    "No one is coming to save you. You start — now.",
+    "There is no perfect moment. There is only this one.",
 ]
 
 DESC_INTRO = [
-    "Bu — algoritmik yo'l bilan yaratilgan, to'liq original ambient fokus musiqasi. "
-    "So'zsiz, reklama pauzalarisiz, chalg'itmaydigan.",
-    "Har bir trek dasturiy tarzda, noldan generatsiya qilinadi — takrorlanmaydi. "
-    "Deep work, o'qish va meditatsiya uchun.",
+    "This is fully original ambient focus music, generated algorithmically. "
+    "No words, no ad breaks, nothing to pull your attention away.",
+    "Every track is generated programmatically from scratch — never repeated. "
+    "For deep work, study and meditation.",
 ]
 
-DESC_BODY = """🎧 Uslub: {theme_display} — sekin synth pad'lar, past drone, {hz}Hz ohang va binaural urish ({beat}Hz)
-⏱ Davomiyligi: ~{dur} daqiqa
-🎼 Tonallik siljishi: {key:+d} yarim ton · akkordlar: {chords}
-🔊 Eng yaxshi natija: naushnikda yoki past ovozda fon sifatida
+DESC_BODY = """🎧 Style: {theme_display} — slow synth pads, low drone, a {hz}Hz tone and a binaural beat ({beat}Hz)
+⏱ Length: ~{dur} minutes
+🎼 Key shift: {key:+d} semitones · chords: {chords}
+🔊 Best experienced: on headphones, or low as background
 
-Bu trek protsedural tarzda tuzilgan va butunlay original — ishlayotgan yoki o'qiyotgan paytingizda fonda tinglash uchun xavfsiz.
+This track is composed procedurally and is completely original — safe to leave playing in the background while you work or study.
 
 {credit}#focusmusic #studymusic #ambient #deepwork #{theme}"""
 
 TAGS_BASE = [
     "focus music", "study music", "concentration music", "deep work music",
-    "ambient music", "fokus musiqa", "diqqat musiqa", "oqish uchun musiqa",
-    "ishlash uchun musiqa", "binaural beats", "solfeggio", "no ads music",
+    "ambient music", "study with me", "reading music", "work music",
+    "background music", "binaural beats", "solfeggio", "no ads music", "lock in",
 ]
 
 
@@ -77,24 +77,24 @@ def generate(outdir, duration_min, seed=None, bg_info=None):
 
     title = rng.choice(TITLE_TEMPLATES).format(concept=concept, context=context, hz=hz, dur=dur)
 
-    # intro matn: mavzuning o'z shabloni + umumiy bitta qator
+    # intro text: the theme's own template + one generic line
     intro_text = cfg["intro"].format(hz=hz) + " " + rng.choice(INTRO_LINES).format(dur=dur)
 
     credit = ""
     if bg_info and bg_info.get("source") == "pexels":
         who = bg_info.get("photographer") or "Pexels"
-        credit = f"📷 Rasm: {who} / Pexels ({bg_info.get('pexels_url', 'pexels.com')})\n\n"
+        credit = f"📷 Image: {who} / Pexels ({bg_info.get('pexels_url', 'pexels.com')})\n\n"
     elif bg_info and bg_info.get("source") == "openverse":
-        who = bg_info.get("photographer") or "noma'lum muallif"
+        who = bg_info.get("photographer") or "unknown artist"
         lic = (bg_info.get("license") or "").upper()
         link = bg_info.get("pexels_url") or bg_info.get("photographer_url") or "openverse.org"
-        credit = f"📷 Rasm: {who} — {lic} ({link}) · openverse.org orqali\n\n"
+        credit = f"📷 Image: {who} — {lic} ({link}) · via openverse.org\n\n"
 
     description = (
         rng.choice(DESC_INTRO) + "\n\n" +
         DESC_BODY.format(
             theme_display=cfg["display"], hz=hz, beat=beat, dur=dur, key=key,
-            chords=chords or "generativ", credit=credit, theme=theme,
+            chords=chords or "generative", credit=credit, theme=theme,
         )
     )
 
