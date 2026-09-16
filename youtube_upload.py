@@ -1,12 +1,11 @@
 """
-6-QISM: YouTube'ga avtomatik yuklash.
+PART 6: Automatic upload to YouTube.
 
-Birinchi ishga tushirishda brauzer orqali bir martalik OAuth ruxsat so'raladi
-(shohruxbek.digital@gmail.com akkauntida "Allow" bosish kerak bo'ladi).
-Keyingi barcha ishga tushirishlarda token.json fayli orqali avtomatik ishlaydi —
-qayta login shart emas.
+On the first run, a one-time OAuth prompt opens in the browser (you'll need to
+click "Allow" on the shohruxbek.digital@gmail.com account). Every run after
+that works automatically via the token.json file — no need to log in again.
 
-Ishlatish:
+Usage:
     python3 youtube_upload.py output/calm_101 --privacy unlisted
     python3 youtube_upload.py output/calm_101 --privacy public
 """
@@ -27,7 +26,7 @@ TOKEN_FILE = os.path.join(os.path.dirname(__file__), "token.json")
 
 
 def get_authenticated_service():
-    # CI muhitida (GitHub Actions) — GitHub Secrets orqali kelgan ma'lumotlardan.
+    # In CI (GitHub Actions) — from credentials passed via GitHub Secrets.
     env_refresh = os.environ.get("YT_REFRESH_TOKEN")
     env_client_id = os.environ.get("YT_CLIENT_ID")
     env_client_secret = os.environ.get("YT_CLIENT_SECRET")
@@ -43,7 +42,7 @@ def get_authenticated_service():
         creds.refresh(Request())
         return build("youtube", "v3", credentials=creds)
 
-    # Lokal (Mac) — token.json fayli orqali.
+    # Local (Mac) — via the token.json file.
     creds = None
     if os.path.exists(TOKEN_FILE):
         creds = Credentials.from_authorized_user_file(TOKEN_FILE, SCOPES)
@@ -53,8 +52,8 @@ def get_authenticated_service():
             creds.refresh(Request())
         else:
             flow = InstalledAppFlow.from_client_secrets_file(CLIENT_SECRET_FILE, SCOPES)
-            print("\nBrauzer ochiladi — shohruxbek.digital@gmail.com akkaunti bilan\n"
-                  "'Allow' bosib ruxsat bering...\n")
+            print("\nOpening the browser — please grant access with the\n"
+                  "shohruxbek.digital@gmail.com account by clicking 'Allow'...\n")
             creds = flow.run_local_server(port=0)
         with open(TOKEN_FILE, "w") as f:
             f.write(creds.to_json())
@@ -85,7 +84,7 @@ def upload_video(outdir, privacy="unlisted"):
         },
     }
 
-    print(f"Yuklanmoqda: {meta['title']}  ({privacy})")
+    print(f"Uploading: {meta['title']}  ({privacy})")
     media = MediaFileUpload(video_path, chunksize=-1, resumable=True, mimetype="video/mp4")
     request = youtube.videos().insert(part="snippet,status", body=body, media_body=media)
 
@@ -93,14 +92,14 @@ def upload_video(outdir, privacy="unlisted"):
     while response is None:
         status, response = request.next_chunk()
         if status:
-            print(f"  yuklandi: {int(status.progress() * 100)}%")
+            print(f"  uploaded: {int(status.progress() * 100)}%")
 
     video_id = response["id"]
-    print(f"Video yuklandi: https://youtu.be/{video_id}")
+    print(f"Video uploaded: https://youtu.be/{video_id}")
 
     if os.path.exists(thumb_path):
         youtube.thumbnails().set(videoId=video_id, media_body=MediaFileUpload(thumb_path)).execute()
-        print("Thumbnail o'rnatildi")
+        print("Thumbnail set")
 
     return video_id
 

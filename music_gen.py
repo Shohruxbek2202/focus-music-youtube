@@ -1,22 +1,22 @@
 """
-1-QISM: Ambient / drone musiqa generatori ("Lock in Focus" uslubi, faqat numpy).
+PART 1: Ambient / drone music generator ("Lock in Focus" style, numpy only).
 
-Har chaqirilganda (seed o'zgarsa) boshqacha chiqadi: mavzu (theme), tonalik,
-akkord davomiyligi, solfeggio chastotasi va shovqin qatlami tasodifiy tanlanadi —
-shu bilan "har video original kontent" talabi qondiriladi.
+Every call (with a different seed) comes out different: theme, key, chord
+duration, solfeggio frequency and noise layer are all picked at random — this
+is what satisfies the "every video is original content" requirement.
 
-Xotira/vaqt tejash uchun bu modul QISQA seamless loop (bir necha daqiqa) render
-qiladi; video_gen uni ffmpeg bilan kerakli uzunlikka aylantiradi (-stream_loop).
+To save memory/time this module renders a SHORT seamless loop (a few minutes);
+video_gen stretches it to the needed length with ffmpeg (-stream_loop).
 
-Ovoz qatlamlari:
-  - sekin evolyutsiyalanuvchi synth pad'lar (akkordlar)
-  - past drone (tonika, sub-oktava)
-  - solfeggio shimmer (mavzu chastotasida sokin sinus)
-  - binaural beat (L/R karrier farqi = beat_hz; naushnik uchun, past amplituda)
-  - shovqin to'shagi (yomg'ir / shamol / havo — mavzuga qarab)
-  - kamdan-kam qo'ng'iroq tovushlari (reverbli sinus)
+Audio layers:
+  - slowly evolving synth pads (chords)
+  - low drone (tonic, sub-octave)
+  - solfeggio shimmer (quiet sine at the theme frequency)
+  - binaural beat (L/R carrier difference = beat_hz; for headphones, low amplitude)
+  - noise bed (rain / wind / air — depending on theme)
+  - occasional bell tones (reverbed sine)
 
-Ishlatish:
+Usage:
     python3 music_gen.py --theme monk --seed 7 --outdir output/x
     from music_gen import generate
     r = generate(theme="monk", seed=7, outdir="output/x")
@@ -34,13 +34,13 @@ from themes import THEMES, THEME_NAMES
 SR = 44100
 NOTE_NAMES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"]
 
-CROSSFADE = 5.0            # loop ulanish nuqtasi va akkordlar orasidagi crossfade
-CYCLES_IN_LOOP = 2         # loop ichida progressiya necha marta takrorlanadi
+CROSSFADE = 5.0            # crossfade at the loop seam and between chords
+CYCLES_IN_LOOP = 2         # how many times the progression repeats inside the loop
 MASTER_VOLUME = 0.5
-DTYPE = np.float32         # xotira uchun
+DTYPE = np.float32         # for memory efficiency
 
 
-# ---------------------------------------------------------------- nota yordamchilari
+# ---------------------------------------------------------------- note helpers
 def note_to_midi(note: str) -> int:
     if note[1] in ("#", "b"):
         name, octave = note[:2], int(note[2:])
@@ -65,7 +65,7 @@ def transpose(chords, semitones):
     return [[midi_to_note(note_to_midi(n) + semitones) for n in ch] for ch in chords]
 
 
-# ---------------------------------------------------------------- signal bloklari
+# ---------------------------------------------------------------- signal blocks
 def _t(n):
     return np.arange(n, dtype=DTYPE) / SR
 
@@ -86,7 +86,7 @@ def pad_tone(freq, dur, voices, harmonic_amps, detune_cents=7, rng=None):
     rng = rng or np.random.default_rng(int(freq * 1000) % (2 ** 31))
     for _ in range(voices):
         f = freq * (2 ** (rng.uniform(-1, 1) * detune_cents / 1200))
-        # yumshoq vibrato
+        # gentle vibrato
         vib = 1 + 0.0025 * np.sin(2 * np.pi * rng.uniform(0.05, 0.15) * t + rng.uniform(0, 6))
         phase = 2 * np.pi * f * np.cumsum(vib) / SR
         voice = np.zeros(n, dtype=DTYPE)
@@ -125,7 +125,7 @@ def solfeggio_shimmer(freq, dur, amp=0.016):
 
 
 def binaural_pair(beat_hz, dur, carrier=126.0, amp=0.05):
-    """Chapga karrier, o'ngga karrier+beat. Naushnikda 'beat_hz' urishi seziladi."""
+    """Carrier on the left, carrier+beat on the right. On headphones you hear the 'beat_hz' pulse."""
     n = int(dur * SR)
     t = _t(n)
     swell = 0.6 + 0.4 * np.sin(2 * np.pi * 0.02 * t)
@@ -135,13 +135,13 @@ def binaural_pair(beat_hz, dur, carrier=126.0, amp=0.05):
 
 
 def _box(x, win):
-    """Vektorlashtirilgan siljuvchi o'rtacha (cumsum orqali)."""
+    """Vectorized moving average (via cumsum)."""
     win = max(1, int(win))
     if win <= 1:
         return x
     c = np.cumsum(np.concatenate([np.zeros(1, dtype=np.float64), x.astype(np.float64)]))
     y = (c[win:] - c[:-win]) / win
-    # uzunlikni saqlash uchun chetlarini to'ldiramiz
+    # pad the edges to preserve length
     pad = len(x) - len(y)
     if pad > 0:
         y = np.concatenate([np.full(pad, y[0]), y])
@@ -149,7 +149,7 @@ def _box(x, win):
 
 
 def _lowpass(x, cutoff_hz):
-    """Ikki marta box-filtr = yumshoq past-o'tkazgichga yaqin (to'liq vektorlashtirilgan)."""
+    """Two box filters in a row ≈ a soft low-pass (fully vectorized)."""
     win = max(1, SR / max(cutoff_hz, 20.0))
     return _box(_box(x, win), win)
 
@@ -157,7 +157,7 @@ def _lowpass(x, cutoff_hz):
 def noise_bed(texture, dur, rng):
     n = int(dur * SR)
     white = rng.standard_normal(n).astype(DTYPE)
-    # pushti-ga yaqin: kumulyativ + normalizatsiya
+    # approximate pink noise: cumulative sum + normalize
     pink = np.cumsum(white)
     pink -= pink.mean()
     pink /= (np.abs(pink).max() + 1e-9)
@@ -172,7 +172,7 @@ def noise_bed(texture, dur, rng):
     t = _t(n)
 
     if texture in ("rain", "rain_heavy"):
-        # tomchi hissi uchun tez tasodifiy modulyatsiya + past-o'tkazgich
+        # fast random modulation + low-pass, for a droplet feel
         drops = np.abs(rng.standard_normal(n).astype(DTYPE)) ** 2
         sig = white * (0.4 + 0.6 * drops)
         sig = np.asarray(_lowpass(sig, cutoff), dtype=DTYPE)
@@ -214,7 +214,7 @@ def add_at(track, sig, start, gain=1.0):
     track[start:end] += sig[:end - start] * gain
 
 
-# ---------------------------------------------------------------- asosiy generator
+# ---------------------------------------------------------------- main generator
 def generate(theme=None, seed=None, outdir="output/track", target_minutes=45.0,
              key_shift=None, base_freq=None):
     if theme not in THEMES:
@@ -236,13 +236,13 @@ def generate(theme=None, seed=None, outdir="output/track", target_minutes=45.0,
     texture = cfg["texture"]
 
     cycle_len = len(chords) * chord_dur
-    loop_len = CYCLES_IN_LOOP * cycle_len + CROSSFADE   # crossfade quyrug'i keyin kesiladi
+    loop_len = CYCLES_IN_LOOP * cycle_len + CROSSFADE   # the crossfade tail gets trimmed later
     n_total = int(loop_len * SR)
 
     left = np.zeros(n_total, dtype=DTYPE)
     right = np.zeros(n_total, dtype=DTYPE)
 
-    # --- pad'lar (akkord bo'yicha) ---
+    # --- pads (per chord) ---
     cursor = 0.0
     for cyc in range(CYCLES_IN_LOOP):
         for ci, chord in enumerate(chords):
@@ -252,13 +252,13 @@ def generate(theme=None, seed=None, outdir="output/track", target_minutes=45.0,
                             amp=0.20, seed_base=(cyc * 17 + ci * 3 + 100))
             add_at(left, pad, start, gain=0.5 + 0.5 * (1 - 0.15))
             add_at(right, pad, start, gain=0.5 + 0.5 * (1 - 0.15))
-            # yengil stereo kengaytma: har akkordga ozgina panorama
+            # light stereo widening: a little pan per chord
             pan = 0.5 + 0.12 * np.sin(cyc + ci)
             add_at(left, pad, start, gain=(1 - pan) * 0.25)
             add_at(right, pad, start, gain=pan * 0.25)
             cursor += chord_dur
 
-    # --- past drone (butun loop bo'ylab, tonika) ---
+    # --- low drone (spans the whole loop, tonic note) ---
     root_midi = note_to_midi(chords[0][0]) - 12
     drone = low_drone(midi_to_freq(root_midi), loop_len, amp=0.085)
     add_at(left, drone, 0)
@@ -274,13 +274,13 @@ def generate(theme=None, seed=None, outdir="output/track", target_minutes=45.0,
     add_at(left, bl, 0)
     add_at(right, br, 0)
 
-    # --- shovqin to'shagi ---
+    # --- noise bed ---
     nb = noise_bed(texture, loop_len, rng)
     nb2 = noise_bed(texture, loop_len, np.random.default_rng((seed or 0) + 999))
     add_at(left, nb, 0)
     add_at(right, nb2, 0)
 
-    # --- kamdan-kam qo'ng'iroqlar ---
+    # --- occasional bells ---
     n_bells = int(rng.integers(2, 5))
     for _ in range(n_bells):
         chord = chords[rng.integers(0, len(chords))]
@@ -299,14 +299,14 @@ def generate(theme=None, seed=None, outdir="output/track", target_minutes=45.0,
     xf = int(CROSSFADE * SR)
     core = int(CYCLES_IN_LOOP * cycle_len * SR)
     for ch in (left, right):
-        # loop oxiridagi quyruqni boshiga aralashtiramiz
+        # blend the loop's ending tail into its beginning
         tail = ch[core:core + xf].copy()
         fade = np.linspace(0, 1, xf, dtype=DTYPE)
         ch[:xf] = ch[:xf] * fade + tail * (1 - fade)
     left = left[:core]
     right = right[:core]
 
-    # --- normalizatsiya ---
+    # --- normalization ---
     peak = max(float(np.max(np.abs(left))), float(np.max(np.abs(right))), 1e-9)
     scale = MASTER_VOLUME / peak
     left = (left * scale).astype(DTYPE)

@@ -9,7 +9,7 @@ concept word, context, image query, frequency and key inside that theme are
 chosen from a seed — so "every video is original content".
 """
 
-# Chords are written in C (root position); music_gen transposes at random.
+# Chords are written in C (root position); music_gen transposes them at random.
 THEMES = {
     "warrior": {
         "display": "WARRIOR",

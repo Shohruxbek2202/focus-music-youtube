@@ -1,13 +1,13 @@
 """
-5-QISM: Orkestrator (pipeline).
+PART 5: Orchestrator (pipeline).
 
-Hammasini bitta buyruq bilan bog'laydi:
-    fon rasmi -> ambient musiqa -> metadata -> kinematik video -> thumbnail
+Ties everything together with a single command:
+    background image -> ambient music -> metadata -> cinematic video -> thumbnail
 
-Ishlatish:
+Usage:
     python3 pipeline.py --minutes 45 --theme monk
     python3 pipeline.py --minutes 45 --theme random --seed 55
-    python3 pipeline.py --minutes 45 --theme random --preview 20   # tez sinov
+    python3 pipeline.py --minutes 45 --theme random --preview 20   # quick test
 """
 
 import argparse

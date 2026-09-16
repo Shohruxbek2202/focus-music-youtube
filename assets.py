@@ -1,14 +1,14 @@
 """
-0-QISM: Fon rasmi manbai.
+PART 0: Background image source.
 
-Mavzuga mos kinematik rasmni oladi. Manba tartibi:
-  1. Openverse API — KALIT KERAK EMAS (CC-litsenziyali rasmlar, Wikimedia/Flickr/...)
-  2. Pexels API — agar PEXELS_API_KEY muhit o'zgaruvchisi bo'lsa (ixtiyoriy, sifatliroq)
-  3. Protsedural fon — internet yo'q / natija yo'q bo'lsa (pipeline hech qachon to'xtamaydi)
+Fetches a cinematic image matching the theme. Source order:
+  1. Openverse API — NO KEY NEEDED (CC-licensed images from Wikimedia/Flickr/...)
+  2. Pexels API — if the PEXELS_API_KEY env var is set (optional, higher quality)
+  3. Procedural background — if offline / no results (the pipeline never stalls)
 
-Faqat standart kutubxona (urllib) ishlatiladi.
+Only the standard library (urllib) is used besides that.
 
-Ishlatish:
+Usage:
     from assets import fetch_background
     info = fetch_background(["greek marble statue", "roman sculpture"], "output/x", seed=7)
 """
@@ -27,7 +27,7 @@ OPENVERSE_SEARCH = "https://api.openverse.org/v1/images/"
 PEXELS_SEARCH = "https://api.pexels.com/v1/search"
 TARGET_W, TARGET_H = 1920, 1080
 _UA = "focus-music-youtube/1.0 (github.com/Shohruxbek2202/focus-music-youtube)"
-_MIN_W = 1200  # bundan tor rasmlarni rad etamiz
+_MIN_W = 1200  # reject images narrower than this
 
 
 def _http_get_json(url, headers=None, timeout=25):
@@ -37,7 +37,7 @@ def _http_get_json(url, headers=None, timeout=25):
 
 
 def _prep_image_url(url, target_w=1920):
-    """Wikimedia to'liq rasm URL'ini kichikroq thumbnail URL'iga aylantiradi (tez yuklash)."""
+    """Turns a full-size Wikimedia image URL into a smaller thumbnail URL (faster download)."""
     marker = "/wikipedia/commons/"
     if "upload.wikimedia.org" in url and marker in url and "/thumb/" not in url:
         tail = url.split(marker, 1)[1]              # "9/9f/Name.jpg"
@@ -54,13 +54,13 @@ def _download(url, dest, timeout=45):
     with urllib.request.urlopen(req, timeout=timeout, context=ssl.create_default_context()) as resp:
         data = resp.read()
     if len(data) < 8000:
-        raise ValueError("rasm juda kichik / bo'sh")
+        raise ValueError("image is too small / empty")
     with open(dest, "wb") as f:
         f.write(data)
 
 
 def _cover_resize(img, w=TARGET_W, h=TARGET_H):
-    """Rasmni w×h ni to'liq qoplaydigan qilib kesib o'lchamlaydi (object-fit: cover)."""
+    """Crops and scales the image to fully cover w×h (object-fit: cover)."""
     img = img.convert("RGB")
     sr = img.width / img.height
     dr = w / h
@@ -82,7 +82,7 @@ def _finalize(raw_path, dest):
         pass
 
 
-# ---------------------------------------------------------------- Openverse (kalitsiz)
+# ---------------------------------------------------------------- Openverse (no key needed)
 def _openverse_query(query, rng, loose):
     params = {
         "q": query,
@@ -100,7 +100,7 @@ def _openverse_query(query, rng, loose):
     results = [
         r for r in data.get("results", [])
         if (r.get("width") or 0) >= min_w
-        and (r.get("width") or 1) >= (r.get("height") or 1)   # landshaft
+        and (r.get("width") or 1) >= (r.get("height") or 1)   # landscape
         and r.get("url")
     ]
     rng.shuffle(results)
@@ -136,7 +136,7 @@ def _try_openverse(queries, outdir, dest, rng):
     return None
 
 
-# ---------------------------------------------------------------- Pexels (ixtiyoriy)
+# ---------------------------------------------------------------- Pexels (optional)
 def _try_pexels(queries, outdir, dest, rng, api_key):
     headers = {"Authorization": api_key, "User-Agent": _UA}
     for query in queries:
@@ -173,7 +173,7 @@ def _try_pexels(queries, outdir, dest, rng, api_key):
     return None
 
 
-# ---------------------------------------------------------------- protsedural fallback
+# ---------------------------------------------------------------- procedural fallback
 def _procedural_background(dest, seed, queries):
     rng = np.random.default_rng(seed)
     top = np.array([18, 20, 34]) + rng.integers(-6, 10, 3)
@@ -201,9 +201,9 @@ def _procedural_background(dest, seed, queries):
 
 
 def fetch_background(queries, outdir, seed=None, api_key=None):
-    """Mavzu so'rovlari ro'yxatidan bittasini tanlab, rasm yuklaydi.
+    """Picks one query from the theme's query list and downloads an image for it.
 
-    Qaytaradi: dict — path va atributsiya ma'lumotlari (tavsifga qo'shish uchun).
+    Returns: dict — path plus attribution info (to add to the description).
     """
     os.makedirs(outdir, exist_ok=True)
     dest = os.path.join(outdir, "background.jpg")

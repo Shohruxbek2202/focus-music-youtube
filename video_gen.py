@@ -1,18 +1,18 @@
 """
-2-QISM: Kinematik video renderer ("Lock in Focus" uslubi).
+PART 2: Cinematic video renderer ("Lock in Focus" style).
 
-Berilgan outdir ichidagi background.jpg + track.wav + gen_meta.json + (ixtiyoriy)
-youtube_metadata.json asosida focus_video.mp4 yasaydi:
+Builds focus_video.mp4 from the outdir's background.jpg + track.wav +
+gen_meta.json + (optional) youtube_metadata.json:
 
-  - fon rasmi + juda sekin Ken Burns zoom
-  - B&W kino-grade + vignette + film grain
-  - pastda oltin rangli audio-reaktiv to'lqin vizualizatori (WAV'dan FFT)
-  - ~6s qora intro: markazda motivatsion matn (fade in/out)
-  - qisqa audio loop ffmpeg bilan kerakli uzunlikka cho'ziladi (-stream_loop)
+  - background image + a very slow Ken Burns zoom
+  - B&W cinematic grade + vignette + film grain
+  - a gold audio-reactive waveform visualizer at the bottom (FFT from the WAV)
+  - ~6s black intro: motivational text centered (fade in/out)
+  - the short audio loop is stretched to the needed length with ffmpeg (-stream_loop)
 
-Faqat numpy + Pillow (chizish) va ffmpeg (kodlash).
+Only numpy + Pillow (drawing) and ffmpeg (encoding).
 
-Ishlatish:
+Usage:
     python3 video_gen.py output/monk_7 --minutes 30
     python3 video_gen.py output/monk_7 --preview 20
 """
@@ -28,10 +28,10 @@ from PIL import Image, ImageDraw, ImageFont
 
 WIDTH, HEIGHT = 1600, 900
 FPS = 20
-BG_UPDATE_EVERY = 10         # Ken Burns fonni har necha kadrga bir yangilash
+BG_UPDATE_EVERY = 10         # how many frames between Ken Burns background updates
 INTRO_SECONDS = 6.0
-KEN_BURNS_ZOOM = 0.10        # video oxiriga borib +10% zoom
-GRAIN_AMOUNT = 2.4           # film grain kuchi (past bo'lsa fayl hajmi kichik)
+KEN_BURNS_ZOOM = 0.10        # +10% zoom by the end of the video
+GRAIN_AMOUNT = 2.4           # film grain strength (lower = smaller file size)
 CRF = 23
 
 FONT_DIR = os.path.join(os.path.dirname(__file__), "assets", "fonts")
@@ -72,17 +72,17 @@ def _vignette(w, h, strength=0.55):
 
 
 def _grade(rgb):
-    """uint8 RGB -> B&W kino-grade (uint8 RGB)."""
+    """uint8 RGB -> B&W cinematic grade (uint8 RGB)."""
     f = rgb.astype(np.float32)
     lum = 0.299 * f[..., 0] + 0.587 * f[..., 1] + 0.114 * f[..., 2]
     lum /= 255.0
-    # S-egri kontrast
+    # S-curve contrast
     lum = np.clip(lum, 0, 1)
     lum = lum ** 1.28
     lum = 0.5 - 0.5 * np.cos(np.pi * np.clip(lum, 0, 1))
-    lum = 0.5 - 0.5 * np.cos(np.pi * np.clip(lum, 0, 1))   # ikki marta = kuchliroq S-kontrast
+    lum = 0.5 - 0.5 * np.cos(np.pi * np.clip(lum, 0, 1))   # applied twice = stronger S-contrast
     lum = 0.035 + 0.90 * lum
-    # sovuq tus
+    # cool tint
     tint = np.array([0.92, 0.98, 1.11], dtype=np.float32)
     out = lum[..., None] * 255.0 * tint
     return out
@@ -111,7 +111,7 @@ def _wrap(draw, text, font, max_w):
 
 
 def _text_layer(text, font, max_w, line_gap=1.35, align_center=True):
-    """Oq matnli RGBA layer (numpy: rgb float + alpha 0..1)."""
+    """White-text RGBA layer (numpy: rgb float + alpha 0..1)."""
     tmp = Image.new("RGB", (10, 10))
     d0 = ImageDraw.Draw(tmp)
     lines = _wrap(d0, text, font, max_w)
@@ -130,7 +130,7 @@ def _text_layer(text, font, max_w, line_gap=1.35, align_center=True):
 
 
 def _paste_alpha(frame, alpha, top_left, color, opacity):
-    """frame (float32 HxWx3) ustiga alpha layer'ni color rangida opacity bilan qo'yadi."""
+    """Paints the alpha layer onto frame (float32 HxWx3) in `color` at `opacity`."""
     if opacity <= 0:
         return
     x0, y0 = top_left
@@ -167,7 +167,7 @@ def render(outdir, target_minutes=None, preview_seconds=None):
     title_text = ymeta.get("title_short") or gen_meta.get("theme_display", "")
     caption = f"{gen_meta.get('theme_display','')}  ·  {int(gen_meta.get('base_freq',0))}Hz"
 
-    # --- fon rasmi ---
+    # --- background image ---
     src = Image.open(bg_path).convert("RGB")
     if src.size != (WIDTH, HEIGHT):
         src = src.resize((WIDTH, HEIGHT), Image.LANCZOS)
@@ -176,18 +176,18 @@ def render(outdir, target_minutes=None, preview_seconds=None):
     vign = _vignette(WIDTH, HEIGHT)
     grain_bank = _make_grain_bank(WIDTH, HEIGHT, seed=gen_meta.get("seed") or 0)
 
-    # --- audio / vizualizator tayyorgarligi ---
+    # --- audio / visualizer prep ---
     mono, sr = _load_mono(wav_path)
     loop_n = len(mono)
     N_FFT = 2048
-    N_BARS = 40                       # bir tomon uchun; markazdan ikki yonga oyna qilib chiziladi
+    N_BARS = 40                       # per side; mirrored outward from the center
     bin_idx = _log_bins(N_FFT, sr, N_BARS, f_lo=70, f_hi=6000)
     window = np.hanning(N_FFT).astype(np.float32)
     bar_smooth = np.zeros(N_BARS, dtype=np.float32)
-    # yuqori chastotalarni ko'tarish uchun yumshoq "whitening" egri chizig'i
+    # soft "whitening" curve to boost the high frequencies
     whiten = np.linspace(1.0, 3.2, N_BARS).astype(np.float32)
 
-    viz_half = WIDTH * 0.42          # markazdan har tomonga
+    viz_half = WIDTH * 0.42          # from the center outward on each side
     viz_cx = WIDTH / 2
     viz_baseline = int(HEIGHT * 0.72)
     bar_w = viz_half / N_BARS
@@ -195,7 +195,7 @@ def render(outdir, target_minutes=None, preview_seconds=None):
     GOLD = np.array([255, 200, 115], dtype=np.float32)
     GOLD_HOT = np.array([255, 235, 185], dtype=np.float32)
 
-    # --- matn layerlari ---
+    # --- text layers ---
     intro_font = _font("Oswald-Variable.ttf", 44)
     title_font = _font("Oswald-Variable.ttf", 40)
     cap_font = _font("Oswald-Variable.ttf", 26)
@@ -222,12 +222,12 @@ def render(outdir, target_minutes=None, preview_seconds=None):
     for fi in range(n_frames):
         t = fi / FPS
 
-        # ---- Ken Burns fon (har BG_UPDATE_EVERY kadrga bir marta qayta gradelanadi) ----
+        # ---- Ken Burns background (re-graded once every BG_UPDATE_EVERY frames) ----
         if bg_cache is None or fi % BG_UPDATE_EVERY == 0:
             prog = t / max(duration, 1e-6)
             zoom = 1.0 + KEN_BURNS_ZOOM * prog
             cw, chh = WIDTH / zoom, HEIGHT / zoom
-            # yengil diagonal pan
+            # a light diagonal pan
             px = (WIDTH - cw) * (0.5 + 0.18 * np.sin(prog * np.pi))
             py = (HEIGHT - chh) * (0.5 + 0.12 * prog)
             crop = src.crop((int(px), int(py), int(px + cw), int(py + chh))).resize(
@@ -238,13 +238,13 @@ def render(outdir, target_minutes=None, preview_seconds=None):
 
         frame = bg_cache.copy()
 
-        # ---- intro dim: ilk INTRO_SECONDS davomida fon qorayadi ----
+        # ---- intro dim: background darkens for the first INTRO_SECONDS ----
         if t < INTRO_SECONDS + 1.0:
             dim = np.clip((t - INTRO_SECONDS) / 1.0 + 1.0, 0, 1)  # 0->1
             dim = 0.16 + 0.84 * dim
             frame *= dim
 
-        # ---- audio-reaktiv to'lqin ----
+        # ---- audio-reactive waveform ----
         center = int((t % loop_seconds) * sr)
         s0 = center - N_FFT // 2
         if s0 < 0:
@@ -262,7 +262,7 @@ def render(outdir, target_minutes=None, preview_seconds=None):
         mx = bars.max()
         if mx > 1e-6:
             bars /= mx
-        # attack tez, release sekin
+        # fast attack, slow release
         up = bars > bar_smooth
         bar_smooth = np.where(up, bar_smooth + 0.5 * (bars - bar_smooth),
                               bar_smooth + 0.14 * (bars - bar_smooth)).astype(np.float32)
@@ -277,7 +277,7 @@ def render(outdir, target_minutes=None, preview_seconds=None):
                 blend = col * viz_op
                 keep = 1 - viz_op
                 bw = max(2, int(bar_w * 0.58))
-                for sign in (-1, 1):                      # markazdan chapga va o'ngga oyna
+                for sign in (-1, 1):                      # mirrored left and right from the center
                     if sign > 0:
                         bx0 = int(viz_cx + (i + 0.6) * bar_w)
                     else:
@@ -289,8 +289,8 @@ def render(outdir, target_minutes=None, preview_seconds=None):
                     reg = frame[y_top:y_bot, bx0:bx1, :]
                     frame[y_top:y_bot, bx0:bx1, :] = reg * keep + blend
 
-        # ---- matnlar ----
-        # intro matn: 0.6->1 (fade in), hold, ->0 (fade out)
+        # ---- text ----
+        # intro text: 0.6->1 (fade in), hold, ->0 (fade out)
         if intro_alpha is not None and t < INTRO_SECONDS:
             if t < 1.2:
                 op = t / 1.2
@@ -302,7 +302,7 @@ def render(outdir, target_minutes=None, preview_seconds=None):
                          ((WIDTH - intro_alpha.shape[1]) / 2, (HEIGHT - intro_alpha.shape[0]) / 2),
                          (245, 245, 245), op * 0.96)
 
-        # sarlavha: introdan keyin ~14s ko'rinadi, keyin so'nadi
+        # title: shows for ~14s after the intro, then fades out
         if title_alpha is not None and INTRO_SECONDS <= t < INTRO_SECONDS + 16:
             lt = t - INTRO_SECONDS
             op = min(1.0, lt / 1.5) if lt < 13 else max(0.0, (16 - lt) / 3.0)
@@ -310,7 +310,7 @@ def render(outdir, target_minutes=None, preview_seconds=None):
                          ((WIDTH - title_alpha.shape[1]) / 2, HEIGHT * 0.12),
                          (240, 240, 240), op * 0.9)
 
-        # doimiy sokin izoh (pastki chap)
+        # persistent quiet caption (bottom left)
         if cap_alpha is not None and t > INTRO_SECONDS:
             op = min(1.0, (t - INTRO_SECONDS) / 3.0) * 0.32
             _paste_alpha(frame, cap_alpha, (WIDTH * 0.045, HEIGHT * 0.9),

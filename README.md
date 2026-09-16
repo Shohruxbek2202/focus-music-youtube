@@ -1,51 +1,51 @@
 # focus-music-youtube
 
-"Lock in Focus" uslubidagi **fokus / deep-work musiqasi** videolarini har safar
-noldan, kreativ tarzda generatsiya qiladigan va YouTube'ga yuklaydigan pipeline.
+A pipeline that generates "Lock in Focus"-style **focus / deep-work music**
+videos from scratch every time, creatively, and uploads them to YouTube.
 
-Har render:
+Each render:
 
-- **mavzu** (`warrior`, `stoic`, `monk`, `midnight`, `storm`, `summit`) tasodifiy
-- **fon rasmi** — Openverse (CC-litsenziyali, **kalit kerak emas**) yoki Pexels (`PEXELS_API_KEY` bo'lsa); ikkalasi ham ishlamasa protsedural fon
-- **musiqa** — sekin ambient synth pad + past drone + solfeggio ohang + binaural beat + shovqin qatlami; qisqa seamless loop
-- **video** — B&W kino-grade + sekin Ken Burns zoom + grain + vignette + pastda oltin audio-to'lqin vizualizatori + ~6s intro motivatsion matn
+- **theme** (`warrior`, `stoic`, `monk`, `midnight`, `storm`, `summit`) picked at random
+- **background image** — Openverse (CC-licensed, **no key needed**) or Pexels (if `PEXELS_API_KEY` is set); if neither works, a procedural background
+- **music** — slow ambient synth pads + low drone + a solfeggio tone + binaural beat + a noise layer; a short seamless loop
+- **video** — B&W cinematic grade + slow Ken Burns zoom + grain + vignette + a gold audio-reactive waveform visualizer at the bottom + a ~6s motivational intro text
 - **metadata** — English concept title, motivational description, tags
-- **thumbnail** — B&W kadr + bitta katta so'z (Anton shrift)
+- **thumbnail** — B&W frame + one big word (Anton font)
 
-## Ishlatish
+## Usage
 
 ```bash
 pip install numpy Pillow
-# YouTube yuklash uchun qo'shimcha:
+# for uploading to YouTube, also:
 pip install google-api-python-client google-auth-httplib2 google-auth-oauthlib
 
-# ixtiyoriy — sifatliroq rasmlar uchun (bo'lmasa Openverse ishlatiladi):
-export PEXELS_API_KEY=...          # bepul: https://www.pexels.com/api/
+# optional — for higher-quality images (falls back to Openverse otherwise):
+export PEXELS_API_KEY=...          # free: https://www.pexels.com/api/
 
 python3 pipeline.py --minutes 45 --theme random
-python3 pipeline.py --minutes 45 --theme monk --seed 7 --preview 20   # tez sinov
+python3 pipeline.py --minutes 45 --theme monk --seed 7 --preview 20   # quick test
 python3 youtube_upload.py output/monk_7_XX␣ --privacy unlisted
 ```
 
-Alohida bosqichlar: `assets.py`, `music_gen.py`, `metadata_gen.py`, `video_gen.py`,
-`thumbnail_gen.py` — har biri mustaqil CLI sifatida ham ishlaydi.
+Individual stages: `assets.py`, `music_gen.py`, `metadata_gen.py`, `video_gen.py`,
+`thumbnail_gen.py` — each also works as a standalone CLI.
 
-## Avtomatlashtirish
+## Automation
 
-`.github/workflows/auto_upload.yml` har 6 soatda pipeline'ni ishga tushirib,
-videoni public qilib yuklaydi. Qo'lda ishga tushirish (Actions → Run workflow)
-`privacy` / `theme` / `minutes` tanlash imkonini beradi.
+`.github/workflows/auto_upload.yml` runs the pipeline every 6 hours and
+uploads the video as public. A manual run (Actions → Run workflow) lets you
+choose `privacy` / `theme` / `minutes`.
 
-Kerakli GitHub Secrets: `YT_CLIENT_ID`, `YT_CLIENT_SECRET`, `YT_REFRESH_TOKEN`
-(`PEXELS_API_KEY` — ixtiyoriy).
+Required GitHub Secrets: `YT_CLIENT_ID`, `YT_CLIENT_SECRET`, `YT_REFRESH_TOKEN`
+(`PEXELS_API_KEY` — optional).
 
-## Sozlamalar
+## Settings
 
-- Video: `video_gen.py` yuqorisidagi `WIDTH/HEIGHT/FPS/CRF/GRAIN_AMOUNT`
-  (standart 1600×900 @ 20fps; 45 daq ≈ 16 daq render, ≈ 250 MB).
-- Mavzular / chastotalar / akkordlar / intro matnlar: `themes.py`.
-- Rasm so'rovlari: har mavzudagi `queries` ro'yxati.
+- Video: `WIDTH/HEIGHT/FPS/CRF/GRAIN_AMOUNT` at the top of `video_gen.py`
+  (default 1600×900 @ 20fps; 45 min ≈ 16 min render, ≈ 250 MB).
+- Themes / frequencies / chords / intro text: `themes.py`.
+- Image queries: the `queries` list under each theme.
 
-## Litsenziya eslatmasi
+## License note
 
-Pexels rasmlaridan foydalanilganda tavsifga fotograf krediti avtomatik qo'shiladi.
+When a Pexels image is used, photographer credit is added to the description automatically.

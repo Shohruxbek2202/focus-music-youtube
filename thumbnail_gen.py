@@ -1,10 +1,10 @@
 """
-4-QISM: Thumbnail generatori ("Lock in Focus" uslubi).
+PART 4: Thumbnail generator ("Lock in Focus" style).
 
-background.jpg ni oladi, B&W kino-grade + vignette qo'yadi, ustiga bitta katta
-konsept so'z (Anton shrift) va kichik subtitr (davomiylik · Hz) chizadi.
+Takes background.jpg, applies a B&W cinematic grade + vignette, and draws one
+big concept word (Anton font) plus a small subtitle (duration · Hz) on top.
 
-Ishlatish:
+Usage:
     python3 thumbnail_gen.py output/monk_7
 """
 
@@ -73,7 +73,7 @@ def generate(outdir, word=None, duration_min=30, hz=None, mood=None):
     bg_path = os.path.join(outdir, "background.jpg")
     img = _grade_bw(_cover(Image.open(bg_path))).convert("RGB")
 
-    # pastdan yuqoriga qoraytiruvchi gradient (matn o'qilishi uchun)
+    # bottom-to-top darkening gradient (so the text stays readable)
     grad = Image.new("L", (1, H), 0)
     for y in range(H):
         grad.putpixel((0, y), int(180 * max(0, (y / H - 0.35) / 0.65) ** 1.5))
@@ -91,7 +91,7 @@ def generate(outdir, word=None, duration_min=30, hz=None, mood=None):
     wx = (W - wl) / 2
     wy = H * 0.60 - wh / 2
 
-    # yumshoq soya
+    # soft drop shadow
     shadow = Image.new("RGBA", (W, H), (0, 0, 0, 0))
     sdraw = ImageDraw.Draw(shadow)
     sdraw.text((wx, wy), word, font=word_font, fill=(0, 0, 0, 220))
